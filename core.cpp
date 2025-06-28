@@ -1,6 +1,7 @@
 #include<fstream>
 #include<iostream>
 #include<sstream>
+#include<string>
 #include<vector>
 
 class file_c;
@@ -31,6 +32,7 @@ int main(int argc,char**argv){
 			}
 		}
 	}
+	read();
 	return 0;
 }
 
@@ -38,7 +40,33 @@ class file_c{
 	private:
 		open_mode_e mode;
 		std::string path;
+		std::vector<std::string> token;
 	public:
+		void read(){
+			std::string line;
+			std::ifstream ifs(path);
+			if(!ifs){
+				token.push_back("\n");
+				return 0;
+			}
+			while(std::getline(ifs,line)){
+				token.push_back("");
+				for(char c:line){
+					if(c==' '||c=='\t'){
+						if(token[token.size()-1][0]!=' '||token[token.size()-1][0]!='\t'){
+							token.push_back("");
+						}
+						token[token.size()-1]+=c;
+					}else{
+						if(token[token.size()-1][0]==' '||token[token.size()-1][0]=='\t'){
+							token.push_back("");
+						}
+						token[token.size()-1]+=c;
+					}
+					token.push_back("\n");
+				}
+			}
+		}
 		void set_mode(open_mode_e mode){
 			this->mode=mode;
 		}
