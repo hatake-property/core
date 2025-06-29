@@ -1,9 +1,11 @@
+#include<cstdlib>
 #include<fstream>
 #include<iostream>
 #include<sstream>
 #include<string>
 #include<vector>
 
+class display_c;
 class file_c;
 enum opentype_e;
 
@@ -35,6 +37,18 @@ int main(int argc,char**argv){
 	read();
 	return 0;
 }
+
+class terminal_c{
+	private:
+		unsigned int col;
+		unsigned int row;
+	public:
+		terminal_c(){
+			set_size();
+		}
+		void clear(); // nonportable part
+		void set_size(); // nonportable
+};
 
 class file_c{
 	private:
@@ -79,3 +93,33 @@ enum open_mode_e{
 	OM_READONLY,
 	OM_WRITE,
 };
+
+ /* nonportable part */
+#if defined(__linux__)
+#	include<sys/ioctl.h>
+#	include<unistd.h>
+#elif defined(_WIN32)||defined(_WIN64)
+#	include<windows.h>
+#endif
+
+void terminal_c::clear(){
+#if defined(__linux__)
+	std::system("clear");
+#elif defined(_WIN32)||defined(_WIN64)
+	std::system("cls");
+#endif
+}
+
+void terminal_c::set_size(){
+#if defined(__linux__)
+	struct winsize ws;
+	ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws);
+	col=ws.ws_col;
+	row=ws.ws_row;
+#elif defined(_WIN32)||defined(_WIN64)
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE),&csbi);
+	col=csbi.srWindow.Right-csbi.srWindow.Left+1;
+	row=csbi.srWindow.Bottom-csbi.srWindow.Top+1;
+#endif
+}
