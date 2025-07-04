@@ -5,9 +5,11 @@
 #include<string>
 #include<vector>
 
-class display_c;
+class terminal_c;
 class file_c;
 enum opentype_e;
+
+terminal_c terminal;
 
 int main(int argc,char**argv){
 	file_c file;
@@ -34,7 +36,25 @@ int main(int argc,char**argv){
 			}
 		}
 	}
-	read();
+	file.read();
+
+	while(true){
+		int key=terminal.read();
+		switch(key){
+			case 'q':
+				goto RETURN_TRUE;
+			case '-':
+				std::string cmd;
+				std::getline(std::cout,cmd);
+				if(cmd=="q"){
+					goto RETURN_TRUE;
+				}
+				break;
+		}
+	}
+
+RETURN_TRUE:
+	file.read();
 	return 0;
 }
 
@@ -46,7 +66,8 @@ class terminal_c{
 		terminal_c(){
 			set_size();
 		}
-		void clear(); // nonportable part
+		void clear(); // nonportable
+		char read(); // nonportable
 		void set_size(); // nonportable
 };
 
@@ -82,10 +103,19 @@ class file_c{
 			}
 		}
 		void set_mode(open_mode_e mode){
-			this->mode=mode;
+			this->mode=mode
 		}
 		void set_path(std::string path){
 			this->path=path;
+		}
+		void write(){
+			if(mode!=OM_WRITE){
+				return;
+			}
+			std::ofstream ofs(path);
+			for(std::string t:token){
+				ofs<<t;
+			}
 		}
 };
 
@@ -97,6 +127,7 @@ enum open_mode_e{
  /* nonportable part */
 #if defined(__linux__)
 #	include<sys/ioctl.h>
+#	include<termios.h>
 #	include<unistd.h>
 #elif defined(_WIN32)||defined(_WIN64)
 #	include<windows.h>
@@ -108,6 +139,29 @@ void terminal_c::clear(){
 #elif defined(_WIN32)||defined(_WIN64)
 	std::system("cls");
 #endif
+}
+
+void terminal_c::read(){
+#if defined(__linux__)
+	struct termios t;
+	tcgetattr(STDIN_FILENO,&t);
+	t.c_lflag&=~(ICANON|ECHO);
+	tcsetattr(STDIN_FILENO,TCSANOW,&t);
+#elif defined(_WIN32)||defined(_WIN64)
+	DWORD d;
+	GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),&m);
+	m&=~(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT);
+	SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),m);
+#endif
+	int c=std::cin.getchar();
+#if defined(__linux__)
+	t.c_lflag|=(ICANON|ECHO);
+	tcsetattr(STDIN_FILENO,TCSANOW,&t);
+#elif defined(_WIN32)||defined(_WIN64)
+	m|=(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT);
+	SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),m);
+#endif
+	return const_cast<char>(c);
 }
 
 void terminal_c::set_size(){
